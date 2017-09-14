@@ -1,0 +1,9 @@
+---
+- hosts: otrs
+  remote_user: root
+
+  tasks:
+  - include_role:
+      name: otrs_update
+    vars:
+      otrs_version: '5.0.22'

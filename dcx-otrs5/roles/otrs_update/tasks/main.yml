@@ -1,0 +1,143 @@
+---
+- name: Fetch installed OTRS version
+  command: cat /opt/otrs/RELEASE | grep VERSION | awk '{print $3}'
+  register: otrs_old_version
+  failed_when: false
+  changed_when: false
+
+- name: Checking if OTRS is already in the latest version
+  debug:
+    msg: "Already in the latest version. Exiting..."
+  when: otrs_version in otrs_old_version.stdout
+
+- meta: end_play
+  when: otrs_version in otrs_old_version.stdout
+
+- include: download.yml
+  when: not otrs_version in otrs_old_version.stdout
+
+- name: Stop operating system related services cron
+  service:
+    name: cron 
+    state: stopped
+
+- name: Stop operating system related services nginx
+  service:
+    name: nginx
+    state: stopped
+
+- name: Stop operating system related services postfix
+  service:
+    name: postfix
+    state: stopped
+
+- name: Stop OTRS related services Cron.sh
+  command: /opt/otrs/bin/Cron.sh stop
+  become: yes
+  become_user: otrs
+  ignore_errors: yes
+  
+- name: Stop OTRS related services Daemon.pl
+  command: /opt/otrs/bin/otrs.Daemon.pl stop
+  become: yes
+  become_user: otrs
+
+- name: Check for OTRS backup directory
+  stat:
+    path: /opt/backupOTRS
+  register: backup_dir
+
+- name: Creating OTRS backup directory
+  file:
+    path: /opt/backupOTRS
+    state: directory
+    mode: 0755
+  when: backup_dir.stat.isdir is not defined
+ 
+- name: Backing up OTRS database
+  command: /opt/otrs/scripts/backup.pl -d /opt/backupOTRS -c gzip -r 2 -t dbonly
+
+- name: Checking OTRS path
+  stat:
+    path: /opt/otrs
+  register: otrs_symlink
+
+- fail:
+    msg: "Path /opt/otrs does not exist or it's not a symlink."
+  when: otrs_symlink.stat.islnk is not defined
+
+- name: Removing old OTRS version
+  file:
+    path: /opt/otrs
+    state: absent
+  when: otrs_symlink.stat.islnk is defined and otrs_symlink.stat.islnk
+
+- name: Creating a symlink to new OTRS version 
+  file: 
+    src: /opt/otrs-{{otrs_version}}
+    dest: /opt/otrs
+    state: link
+
+- name: Restoring configuration file Config.pm
+  command: cp -f /opt/otrs={{otrs_old_version}}/Kernel/Config.pm /opt/otrs/Kernel/Config.pm
+
+- name: Restoring configuration file ZZZAuto.pm
+  command: cp -f /opt/otrs-{{otrs_old_version}}/Kernel/Config/Files/ZZZAuto.pm /opt/otrs/Kernel/Config/Files/ZZZAuto.pm
+
+- name: Restoring article data
+  command: cp -f /opt/otrs-{{otrs_old_version}}/var/stats/*.installed /opt/otrs/var/stats/
+
+- name: Restoring TicketCounter.log
+  command: cp -f /opt/otrs-{{otrs_old_version}}/var/log/TicketCounter.log /opt/otrs/var/log/TicketCounter.log
+
+- name: Copying OTRS cron jobs
+  command: cp -f /opt/otrs={{otrs_old_version}}/var/cron/mailfetch /opt/otrs/var/cron/mailfetch
+
+- name: Activating OTRS cron jobs
+  command: for foo in *.dist; do cp $foo `basename $foo .dist`; done
+  args:
+    chdir: /opt/otrs/var/cron/
+
+- name: Run OTRS script to set correct permissions
+  command: /opt/otrs/bin/otrs.SetPermissions.pl --web-user=otrs --web-group=www-data /opt/otrs
+  
+- name: Refresh OTRS configuration cache
+  command: /opt/otrs/bin/otrs.Console.pl Maint::Config::Rebuild
+  become: yes
+  become_user: otrs
+
+- name: Delete OTRS configuration cache
+  command: /opt/otrs/bin/otrs.Console.pl Maint::Cache::Delete
+  become: yes
+  become_user: otrs
+
+- name: Start operating system related services cron
+  service:
+    name: cron 
+    state: started
+
+- name: Start operating system related services nginx
+  service:
+    name: nginx
+    state: started
+
+- name: Start operating system related services postfix
+  service:
+    name: postfix
+    state: started
+
+- name: Reinstall OTRS 3rd party packages
+  command: /opt/otrs/bin/otrs.Console.pl Admin::Package::ReinstallAll
+  become: yes
+  become_user: otrs
+
+- name: Start OTRS related services Cron.sh
+  command: /opt/otrs/bin/Cron.sh start
+  become: yes
+  become_user: otrs
+  ignore_errors: yes
+  
+- name: Start OTRS related services Daemon.pl
+  command: /opt/otrs/bin/otrs.Daemon.pl start
+  become: yes
+  become_user: otrs

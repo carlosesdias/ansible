@@ -1,0 +1,13 @@
+---
+- hosts: dcx-install
+  remote_user: root
+  tasks:
+   - name: Creating 'ansible' user
+     user: name=ansible
+   - name: Copy sudo rules
+     copy: src=./ansible.sudo dest=/etc/sudoers.d/ansible
+   - name: Set authorized key for 'ansible' user
+     authorized_key:
+       user: ansible
+       state: present
+       key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

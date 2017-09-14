@@ -1,0 +1,17 @@
+- hosts: dcx
+  become: yes
+  remote_user: ansible
+  tasks:
+   - name: Updating Apt Package Cache
+     apt: update_cache=yes
+
+   - name: Updating Operating System
+     apt: upgrade=safe
+
+   - name: Check if a reboot is required
+     register: file
+     stat: path=/var/run/reboot-required get_md5=no
+
+   - name: Reboot the server
+     command: /sbin/reboot
+     when: file.stat.exists == true

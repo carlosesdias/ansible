@@ -1,0 +1,11 @@
+---
+- name: Check if OTRS directory exists
+  stat: path=/opt/otrs-{{otrs_version}}
+  register: otrs_directory
+
+- name: Download and extract OTRS
+  unarchive:
+    src: "http://ftp.otrs.org/pub/otrs/otrs-{{otrs_version}}.tar.gz"
+    dest: /opt/
+    remote_src: yes
+  when: not otrs_directory.stat.exists
