@@ -1,20 +1,23 @@
 ---
 - name: Fetch installed OTRS version
-  command: cat /opt/otrs/RELEASE | grep VERSION | awk '{print $3}'
-  register: otrs_old_version
+  command: awk '/VERSION/ { print $3 }' /opt/otrs/RELEASE
+  register: otrs_release
   failed_when: false
   changed_when: false
+
+- set_fact:
+     otrs_old_version: "{{ otrs_release.stdout }}"
 
 - name: Checking if OTRS is already in the latest version
   debug:
     msg: "Already in the latest version. Exiting..."
-  when: otrs_version in otrs_old_version.stdout
+  when: otrs_version in otrs_release.stdout
 
 - meta: end_play
-  when: otrs_version in otrs_old_version.stdout
+  when: otrs_version in otrs_release.stdout
 
 - include: download.yml
-  when: not otrs_version in otrs_old_version.stdout
+  when: not otrs_version in otrs_release.stdout
 
 - name: Stop operating system related services cron
   service:
@@ -79,41 +82,39 @@
     state: link
 
 - name: Restoring configuration file Config.pm
-  command: cp -f /opt/otrs={{otrs_old_version}}/Kernel/Config.pm /opt/otrs/Kernel/Config.pm
+  command: "cp -f /opt/otrs-{{otrs_old_version}}/Kernel/Config.pm /opt/otrs/Kernel/Config.pm"
 
 - name: Restoring configuration file ZZZAuto.pm
-  command: cp -f /opt/otrs-{{otrs_old_version}}/Kernel/Config/Files/ZZZAuto.pm /opt/otrs/Kernel/Config/Files/ZZZAuto.pm
-
-- name: Restoring article data
-  command: cp -f /opt/otrs-{{otrs_old_version}}/var/stats/*.installed /opt/otrs/var/stats/
+  command: "cp -f /opt/otrs-{{otrs_old_version}}/Kernel/Config/Files/ZZZAuto.pm /opt/otrs/Kernel/Config/Files/ZZZAuto.pm"
 
 - name: Restoring TicketCounter.log
-  command: cp -f /opt/otrs-{{otrs_old_version}}/var/log/TicketCounter.log /opt/otrs/var/log/TicketCounter.log
+  command: "cp -f /opt/otrs-{{otrs_old_version}}/var/log/TicketCounter.log /opt/otrs/var/log/TicketCounter.log"
 
 - name: Copying OTRS cron jobs
-  command: cp -f /opt/otrs={{otrs_old_version}}/var/cron/mailfetch /opt/otrs/var/cron/mailfetch
+  command: "cp -f /opt/otrs-{{otrs_old_version}}/var/cron/mailfetch /opt/otrs/var/cron/mailfetch"
 
 - name: Activating OTRS cron jobs
-  command: for foo in *.dist; do cp $foo `basename $foo .dist`; done
+  shell: "for i in `ls *.dist`; do cp $i `basename $i .dist`; done"
   args:
-    chdir: /opt/otrs/var/cron/
+    chdir: /opt/otrs/var/cron
+    executable: /bin/bash
 
 - name: Run OTRS script to set correct permissions
-  command: /opt/otrs/bin/otrs.SetPermissions.pl --web-user=otrs --web-group=www-data /opt/otrs
+  command: "/opt/otrs/bin/otrs.SetPermissions.pl --web-user=otrs --web-group=www-data /opt/otrs"
   
 - name: Refresh OTRS configuration cache
-  command: /opt/otrs/bin/otrs.Console.pl Maint::Config::Rebuild
+  command: "/opt/otrs/bin/otrs.Console.pl Maint::Config::Rebuild"
   become: yes
   become_user: otrs
 
 - name: Delete OTRS configuration cache
-  command: /opt/otrs/bin/otrs.Console.pl Maint::Cache::Delete
+  command: "/opt/otrs/bin/otrs.Console.pl Maint::Cache::Delete"
   become: yes
   become_user: otrs
 
 - name: Start operating system related services cron
   service:
-    name: cron 
+    name: cron
     state: started
 
 - name: Start operating system related services nginx
