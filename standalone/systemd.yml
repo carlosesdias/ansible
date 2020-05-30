@@ -1,0 +1,12 @@
+- hosts: cluster
+  become: yes
+  tasks:
+    - name: enable docker on boot
+      systemd:
+        name: docker
+        enabled: yes
+    
+    - name: start docker
+      systemd:
+        name: docker
+        state: started

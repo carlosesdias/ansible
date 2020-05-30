@@ -1,0 +1,22 @@
+- hosts: master
+  remote_user: centos
+  gather_facts: false
+  tasks:
+    - name: get join command
+      shell: docker swarm init | awk '/2377$/{print}' | sed 's/^[ \t]*//'
+      register: command_output
+    - debug:
+        var: command_output.stdout
+
+    - name: set join command
+      set_fact:
+        join_cmd: "{{ command_output.stdout }}"
+
+- hosts: workers
+  remote_user: centos
+  tasks:
+    - name: join cluster
+      shell: "{{ hostvars['master'].join_cmd }}"
+      register: command_output
+    - debug:
+        var: command_output.stdout

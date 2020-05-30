@@ -1,0 +1,8 @@
+- hosts: swarm-master
+  tasks:
+    - name: Install cowsay
+      apt:
+         name: cowsay
+         state: present
+    - name: Running cowsay
+      command: cowsay hello, world!

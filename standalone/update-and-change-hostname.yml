@@ -1,0 +1,52 @@
+- hosts: swarmcluster
+  become: yes
+  remote_user: ubuntu
+
+  tasks:
+    - name: Update all packages to the latest version
+      apt:
+        upgrade: dist
+
+    - name: Remove useless packages from the cache
+      apt:
+        autoclean: yes
+
+    - name: Remove dependencies that are no longer required
+      apt:
+        autoremove: yes
+
+- hosts: swarmmaster
+  become: yes
+  remote_user: ubuntu
+
+  tasks:
+    - name: Change hostname
+      hostname: 
+        name: swarm-master
+
+- hosts: swarmnode1
+  become: yes
+  remote_user: ubuntu
+
+  tasks:
+    - name: Change hostname
+      hostname: 
+        name: swarm-node1
+
+- hosts: swarmnode2
+  become: yes
+  remote_user: ubuntu
+
+  tasks:
+    - name: Change hostname
+      hostname: 
+        name: swarm-node2
+
+- hosts: swarmnode3
+  become: yes
+  remote_user: ubuntu
+
+  tasks:
+    - name: Change hostname
+      hostname: 
+        name: swarm-node3

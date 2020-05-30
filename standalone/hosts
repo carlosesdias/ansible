@@ -1,0 +1,15 @@
+[cluster]
+master ansible_host=140.238.184.213 ansible_user=centos
+node1 ansible_host=168.138.229.228 ansible_user=centos
+node2 ansible_host=168.138.231.37 ansible_user=centos
+node3 ansible_host=152.67.52.191 ansible_user=centos
+node4 ansible_host=152.67.42.3 ansible_user=centos
+
+[masters]
+master ansible_host=140.238.184.213 ansible_user=centos
+
+[workers]
+node1 ansible_host=168.138.229.228 ansible_user=centos
+node2 ansible_host=168.138.231.37 ansible_user=centos
+node3 ansible_host=152.67.52.191 ansible_user=centos
+node4 ansible_host=152.67.42.3 ansible_user=centos
