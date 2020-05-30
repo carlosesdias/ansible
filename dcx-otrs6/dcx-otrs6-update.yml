@@ -6,4 +6,4 @@
   - include_role:
       name: otrs_update
     vars:
-      otrs_version: '5.0.34'
+      otrs_version: '6.0.16'
